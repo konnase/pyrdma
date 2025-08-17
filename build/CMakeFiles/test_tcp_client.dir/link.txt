@@ -1,0 +1,1 @@
+/usr/bin/c++ CMakeFiles/test_tcp_client.dir/examples/tcp/test_tcp_client.cpp.o -o test_tcp_client  src/libcommunicator.a -libverbs 

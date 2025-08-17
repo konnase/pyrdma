@@ -1,0 +1,2 @@
+/usr/bin/ar qc libcommunicator.a CMakeFiles/communicator.dir/tcp_communicator.cpp.o CMakeFiles/communicator.dir/rdma_communicator.cpp.o
+/usr/bin/ranlib libcommunicator.a

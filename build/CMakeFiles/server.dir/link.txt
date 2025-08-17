@@ -1,0 +1,1 @@
+/usr/bin/c++ CMakeFiles/server.dir/examples/rdma/server.cpp.o -o server  src/libcommunicator.a -libverbs 
