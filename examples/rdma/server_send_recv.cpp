@@ -27,7 +27,7 @@ int main() {
     int cfd = accept(lfd,nullptr,nullptr); if(cfd<0) die("accept");
 
     // Create RDMA communicator
-    RDMACommunicator rdma_comm(cfd, BUF_SIZE);
+    RDMACommunicator rdma_comm(cfd, "mlx5_1", 0, BUF_SIZE);
     printf("RDMACommunicator: fd=%d, buffer_size=%ld\n", cfd, BUF_SIZE);
     
     // Exchange QP information

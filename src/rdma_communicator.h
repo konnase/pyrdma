@@ -17,6 +17,8 @@ struct WireMsg {
 class RDMACommunicator : public Communicator {
 private:
     int socket_fd;
+    char* device_name;
+    int gid_index;
     ibv_context* ctx;
     ibv_pd* pd;
     ibv_cq* cq;
@@ -28,7 +30,7 @@ private:
     
     // RDMA connection parameters
     static const int IB_PORT = 1;
-    static const int GID_INDEX = 0;
+    static const int DEFAULT_GID_INDEX = 0;
     static const int CQE = 16;
     
     // Helper functions
@@ -45,7 +47,7 @@ public:  // Make these methods accessible from main
 private:  // Return to private for other members
     
 public:
-    RDMACommunicator(int fd, size_t buffer_size = 4096);
+    RDMACommunicator(int fd, char* device_name, int gid_index = 0, size_t buffer_size = 4096);
     ~RDMACommunicator();
     
     // Post receive work request for RDMA RECV operation

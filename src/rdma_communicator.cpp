@@ -32,7 +32,8 @@ void RDMACommunicator::writen(int fd, const void* p, size_t n) {
     }
 }
 
-RDMACommunicator::RDMACommunicator(int fd, size_t buffer_size) : socket_fd(fd), buf_size(buffer_size) {
+RDMACommunicator::RDMACommunicator(int fd, char* device_name, int gid_index, size_t buffer_size) : 
+    socket_fd(fd), device_name(device_name), gid_index(gid_index), buf_size(buffer_size) {
     // Initialize RDMA resources
     if (init_rdma() != 0) {
         die("Failed to initialize RDMA");
@@ -53,30 +54,25 @@ int RDMACommunicator::init_rdma() {
     int num;
     ibv_device **dev_list = ibv_get_device_list(&num);
     if (!dev_list || num == 0) return -1;
-    
-    // Open device
-    ctx = ibv_open_device(dev_list[0]);
-    if (!ctx) return -1;
 
-    // printf("RDMACommunicator: device_name=%s\n", device_name);
-    // struct ibv_context* ctx = NULL;
-    // for (int i = 0; i < num_devices; i++) {
-    //     const char* name = ibv_get_device_name(dev_list[i]);
-    //     printf("RDMACommunicator: name=%s, device_name=%s\n", name, device_name);
-    //     if (strcmp(name, device_name) == 0) {
-    //         printf("RDMACommunicator: find device %s\n", device_name);
-    //         ctx = ibv_open_device(dev_list[i]);
-    //         if (!ctx) {
-    //             fprintf(stderr, "Could not open device %s\n", device_name);
-    //         }
-    //         break;
-    //     }
-    // }
+    printf("RDMACommunicator: device_name=%s\n", device_name);
+    for (int i = 0; i < num; i++) {
+        const char* name = ibv_get_device_name(dev_list[i]);
+        printf("RDMACommunicator: name=%s, device_name=%s\n", name, device_name);
+        if (strcmp(name, device_name) == 0) {
+            printf("RDMACommunicator: find device %s\n", device_name);
+            ctx = ibv_open_device(dev_list[i]);
+            if (!ctx) {
+                fprintf(stderr, "Could not open device %s\n", device_name);
+            }
+            break;
+        }
+    }
 
-    // if (!ctx) {
-    //     fprintf(stderr, "Could not find device %s\n", device_name);
-    //     return -1;
-    // }
+    if (!ctx) {
+        fprintf(stderr, "Could not find device %s\n", device_name);
+        return -1;
+    }
     
     // Free device list
     ibv_free_device_list(dev_list);
@@ -145,7 +141,7 @@ int RDMACommunicator::modify_qp_to_rtr(WireMsg& peer) {
     if (attr.ah_attr.is_global) {
         memcpy(&attr.ah_attr.grh.dgid, peer.gid, 16);
         attr.ah_attr.grh.hop_limit = 1;
-        attr.ah_attr.grh.sgid_index = GID_INDEX;
+        attr.ah_attr.grh.sgid_index = DEFAULT_GID_INDEX;
         attr.ah_attr.dlid = 0;
     } else {
         attr.ah_attr.dlid = peer.lid;
@@ -174,7 +170,7 @@ int RDMACommunicator::modify_qp_to_rts(WireMsg& self) {
 int RDMACommunicator::exchange_qp_info(WireMsg& self, WireMsg& peer) {
     // Query local GID
     ibv_gid gid{};
-    if (ibv_query_gid(ctx, IB_PORT, GID_INDEX, &gid)) return -1;
+    if (ibv_query_gid(ctx, IB_PORT, DEFAULT_GID_INDEX, &gid)) return -1;
     
     // Fill self information
     self.qpn = qp->qp_num;

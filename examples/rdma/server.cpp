@@ -26,7 +26,7 @@ int main() {
     int cfd = accept(lfd,nullptr,nullptr); if(cfd<0) die("accept");
 
     // Create RDMA communicator
-    RDMACommunicator rdma_comm(cfd);
+    RDMACommunicator rdma_comm(cfd, "mlx5_0");
     
     // Exchange QP information
     WireMsg peer{}, self{};

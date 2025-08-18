@@ -25,7 +25,7 @@ int main(int argc, char** argv){
     if(connect(cfd,(sockaddr*)&sa,sizeof(sa))<0) die("connect");
 
     // Create RDMA communicator
-    RDMACommunicator rdma_comm(cfd, BUF_SIZE);
+    RDMACommunicator rdma_comm(cfd, "mlx5_0", 0, BUF_SIZE);
     
     // Get buffer and write message to it
     char* buf = (char*)rdma_comm.get_buffer();
