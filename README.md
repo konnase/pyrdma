@@ -44,6 +44,46 @@ make
 
 This will compile the server and client executables in the build directory.
 
+### Using setup.py (Python Package)
+
+To build and install the Python package:
+
+```bash
+# Build the wheel package
+python setup.py bdist_wheel
+
+# Install the package
+pip install dist/pyrdma-*.whl
+
+# Or in development mode
+pip install -e .
+```
+
+This will compile the pybind11 extension and create a Python package that can be imported in Python scripts.
+
+After installation, you can use the pyrdma package in your Python code:
+
+```python
+import pyrdma
+
+# Create a TCP communicator
+# tcp_comm = pyrdma.TCPCommunicator(socket_fd)
+
+# Create an RDMA communicator
+# rdma_comm = pyrdma.RDMACommunicator(socket_fd, device_name, gid_index, buffer_size)
+
+# Use WireMsg for exchanging QP information
+# msg = pyrdma.WireMsg()
+```
+
+For testing the installed package, you can run:
+
+```bash
+python test_wheel.py
+```
+
+This script will verify that the pyrdma module can be imported and that the main classes can be instantiated correctly.
+
 ## Dependencies
 
 - `libibverbs-dev` (for RDMA operations)
