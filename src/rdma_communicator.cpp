@@ -57,6 +57,26 @@ int RDMACommunicator::init_rdma() {
     // Open device
     ctx = ibv_open_device(dev_list[0]);
     if (!ctx) return -1;
+
+    // printf("RDMACommunicator: device_name=%s\n", device_name);
+    // struct ibv_context* ctx = NULL;
+    // for (int i = 0; i < num_devices; i++) {
+    //     const char* name = ibv_get_device_name(dev_list[i]);
+    //     printf("RDMACommunicator: name=%s, device_name=%s\n", name, device_name);
+    //     if (strcmp(name, device_name) == 0) {
+    //         printf("RDMACommunicator: find device %s\n", device_name);
+    //         ctx = ibv_open_device(dev_list[i]);
+    //         if (!ctx) {
+    //             fprintf(stderr, "Could not open device %s\n", device_name);
+    //         }
+    //         break;
+    //     }
+    // }
+
+    // if (!ctx) {
+    //     fprintf(stderr, "Could not find device %s\n", device_name);
+    //     return -1;
+    // }
     
     // Free device list
     ibv_free_device_list(dev_list);
@@ -177,13 +197,71 @@ int RDMACommunicator::exchange_qp_info(WireMsg& self, WireMsg& peer) {
 }
 
 int RDMACommunicator::send(const void* buf, size_t len) {
-    writen(socket_fd, buf, len);
+    // Use RDMA SEND to send data
+    ibv_sge sge{};
+    sge.addr = (uintptr_t)buf;
+    sge.length = len;
+    sge.lkey = mr->lkey;
+    
+    ibv_send_wr wr{};
+    wr.wr_id = 3;
+    wr.opcode = IBV_WR_SEND;
+    wr.sg_list = &sge;
+    wr.num_sge = 1;
+    wr.send_flags = IBV_SEND_SIGNALED;
+    
+    ibv_send_wr* bad = nullptr;
+    if (ibv_post_send(qp, &wr, &bad)) return -1;
+    
+    // Poll completion
+    ibv_wc wc{};
+    int np;
+    do { 
+        np = ibv_poll_cq(cq, 1, &wc); 
+    } while (np == 0);
+    
+    if (np < 0 || wc.status != IBV_WC_SUCCESS) {
+        return -1;
+    }
+    
     return 0;
 }
 
+int RDMACommunicator::post_receive(void* buf, size_t len) {
+    ibv_sge sge{};
+    sge.addr = (uintptr_t)buf;
+    sge.length = len;
+    sge.lkey = mr->lkey;
+    
+    ibv_recv_wr wr{};
+    wr.wr_id = 2;
+    wr.sg_list = &sge;
+    wr.num_sge = 1;
+    
+    ibv_recv_wr* bad = nullptr;
+    return ibv_post_recv(qp, &wr, &bad);
+}
+
 int RDMACommunicator::recv(void* buf, size_t len) {
-    readn(socket_fd, buf, len);
-    return 0;
+    // Poll completion queue for received data
+    ibv_wc wc{};
+    int np;
+    do { 
+        np = ibv_poll_cq(cq, 1, &wc); 
+    } while (np == 0);
+    
+    if (np < 0 || wc.status != IBV_WC_SUCCESS) {
+        return -1;
+    }
+    
+    // For RECV operations, the data is already in the buffer
+    // We just need to return the number of bytes received
+    // The wr_id for RECV operations should be 2
+    if (wc.wr_id == 2) {
+        return wc.byte_len;
+    }
+    
+    return -1;
 }
 
 int RDMACommunicator::write(const void* local_buf, size_t len, uint64_t remote_addr, uint32_t rkey) {

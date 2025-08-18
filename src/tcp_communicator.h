@@ -33,8 +33,7 @@ public:
         return -1;
     }
 
-    int close() override;
-    int get_fd() override;
+    int get_fd();
 };
 
 #endif // TCP_COMMUNICATOR_H

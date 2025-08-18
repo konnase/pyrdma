@@ -29,10 +29,6 @@ int TCPCommunicator::recv(void* buf, size_t len) {
     return ret;
 }
 
-int TCPCommunicator::close() {
-    return ::close(socket_fd);
-}
-
 int TCPCommunicator::get_fd() {
     return socket_fd;
 }

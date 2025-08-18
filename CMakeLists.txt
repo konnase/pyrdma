@@ -26,6 +26,14 @@ add_executable(client examples/rdma/client.cpp)
 target_link_libraries(client PRIVATE communicator ${IBVERBS_LIBRARIES})
 target_include_directories(client PRIVATE ${IBVERBS_INCLUDE_DIRS})
 
+add_executable(client_send_recv examples/rdma/client_send_recv.cpp)
+target_link_libraries(client_send_recv PRIVATE communicator ${IBVERBS_LIBRARIES})
+target_include_directories(client_send_recv PRIVATE ${IBVERBS_INCLUDE_DIRS})
+
+add_executable(server_send_recv examples/rdma/server_send_recv.cpp)
+target_link_libraries(server_send_recv PRIVATE communicator ${IBVERBS_LIBRARIES})
+target_include_directories(server_send_recv PRIVATE ${IBVERBS_INCLUDE_DIRS})
+
 add_executable(test_tcp_server examples/tcp/test_tcp_server.cpp)
 target_link_libraries(test_tcp_server PRIVATE communicator)
 

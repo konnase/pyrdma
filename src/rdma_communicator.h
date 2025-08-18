@@ -24,6 +24,7 @@ private:
     ibv_mr* mr;
     void* buf;
     size_t buf_size;
+    WireMsg peer_info;  // Store remote QP information
     
     // RDMA connection parameters
     static const int IB_PORT = 1;
@@ -47,7 +48,10 @@ public:
     RDMACommunicator(int fd, size_t buffer_size = 4096);
     ~RDMACommunicator();
     
-    // Implement send/recv operations using TCP socket
+    // Post receive work request for RDMA RECV operation
+    int post_receive(void* buf, size_t len);
+    
+    // Implement send/recv operations using RDMA SEND/RECV
     int send(const void* buf, size_t len) override;
     int recv(void* buf, size_t len) override;
     
