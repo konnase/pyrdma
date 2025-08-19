@@ -1,173 +1,53 @@
-# pyrdma - Refactored Version
+# pyrdma
 
-This is a refactored version of the pyrdma project that implements a cleaner architecture with reusable communicator classes.
+## 1. Prerequisites
 
-## Project Structure
+- **libibverbs-dev** (for RDMA operations)
+- **CMake** (recommended build system)
+- **Python 3.6+** (for Python bindings)
+- **pybind11** (for Python bindings)
 
-- `src/` - Contains the communicator classes
-  - `communicator.h` - Base communicator class
-  - `tcp_communicator.h/cpp` - TCP communicator implementation
-  - `rdma_communicator.h/cpp` - RDMA communicator implementation
-- `server.cpp` - Server implementation using RDMA communicator
-- `client.cpp` - Client implementation using RDMA communicator
-
-## Features
-
-- Reusable communicator classes for both TCP and RDMA
-- Support for send/recv operations over TCP
-- Support for RDMA write/read operations
-- Clean separation of concerns
-- Improved error handling and code organization
-
-## Building the Project
-
-### Using Make (Legacy)
-
-To build the project with make, simply run:
-
+Install dependencies on Ubuntu/Debian:
 ```bash
-make
+sudo apt-get update
+sudo apt-get install -y libibverbs-dev cmake python3-dev
 ```
 
-This will compile the server and client executables.
+## 2. Installation
 
-### Using CMake (Recommended)
-
-To build the project with CMake:
-
+### Build from Source (C++)
 ```bash
-mkdir build
-cd build
-cmake ..
-make
+bash hack/build.sh
 ```
 
-This will compile the server and client executables in the build directory.
-
-### Using setup.py (Python Package)
-
-To build and install the Python package:
-
+### Python Package Installation
 ```bash
-# Build the wheel package
-python setup.py bdist_wheel
+# Build wheel package
+bash hack/build_whl.sh
 
-# Install the package
+# Install package
 pip install dist/pyrdma-*.whl
 
-# Or in development mode
+# Or development mode
 pip install -e .
 ```
 
-This will compile the pybind11 extension and create a Python package that can be imported in Python scripts.
+## 3. Example
 
-After installation, you can use the pyrdma package in your Python code:
+### Python Usage
+Refer to [examples/test_pyrdma.py](examples/test_pyrdma.py)
 
-```python
-import pyrdma
+### C++ Usage
+Refer to [examples/rdma](examples/rdma) and [examples/tcp](examples/tcp)
 
-# Create a TCP communicator
-# tcp_comm = pyrdma.TCPCommunicator(socket_fd)
+## 4. Contributing
 
-# Create an RDMA communicator
-# rdma_comm = pyrdma.RDMACommunicator(socket_fd, device_name, gid_index, buffer_size)
+Contributions are welcome! Please:
 
-# Use WireMsg for exchanging QP information
-# msg = pyrdma.WireMsg()
-```
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests if applicable
+5. Submit a pull request
 
-For testing the installed package, you can run:
-
-```bash
-python test_wheel.py
-```
-
-This script will verify that the pyrdma module can be imported and that the main classes can be instantiated correctly.
-
-## Dependencies
-
-- `libibverbs-dev` (for RDMA operations)
-
-To install dependencies on Ubuntu/Debian:
-
-```bash
-# Using apt
-sudo apt-get update
-sudo apt-get install -y libibverbs-dev
-
-# Or using the provided make target
-make install-deps
-```
-
-## Running the Application
-
-1. Start the server:
-   ```bash
-   ./server
-   ```
-
-2. In another terminal, run the client (replace SERVER_IP with the server's IP address):
-   ```bash
-   ./client SERVER_IP
-   ```
-
-## Testing the TCP Communicator
-
-To test the TCP communicator implementation, you can run the test programs:
-
-1. Start the TCP test server:
-   ```bash
-   ./test_tcp_server
-   ```
-
-2. In another terminal, run the TCP test client:
-   ```bash
-   ./test_tcp_client
-   ```
-
-This will demonstrate the basic send/recv functionality of the TCP communicator.
-
-## Architecture
-
-The refactored version introduces a base `Communicator` class that defines the interface for all communication operations. Two implementations are provided:
-
-1. `TCPCommunicator` - Implements send/recv operations over TCP sockets
-2. `RDMACommunicator` - Implements both TCP send/recv and RDMA write/read operations
-
-This design allows for better code reuse and easier maintenance.
-
-## Implementation Details
-
-### Base Communicator Class
-
-The base `Communicator` class defines the interface for all communication operations:
-
-- `send/recv` methods for message passing
-- `write/read` methods for RDMA operations
-
-### TCP Communicator
-
-The `TCPCommunicator` class implements the `Communicator` interface using standard TCP sockets. It provides:
-
-- `send` method to send data over TCP
-- `recv` method to receive data over TCP
-- `write/read` methods that return error codes since RDMA is not supported over TCP
-
-### RDMA Communicator
-
-The `RDMACommunicator` class implements the full `Communicator` interface with both TCP and RDMA capabilities:
-
-- `send/recv` methods using TCP sockets for control messages
-- `write` method to perform RDMA writes
-- `read` method to perform RDMA reads
-- Connection establishment and management for RDMA operations
-
-## Code Improvements
-
-The refactored code includes several improvements over the original implementation:
-
-1. **Modularity**: Code is organized into classes with clear responsibilities
-2. **Reusability**: Common functionality is encapsulated in base classes
-3. **Maintainability**: Changes to communication logic only need to be made in one place
-4. **Error Handling**: Better error handling with descriptive messages
-5. **Code Clarity**: Clear separation between TCP control operations and RDMA data operations
+For questions or issues, please open a GitHub issue.
