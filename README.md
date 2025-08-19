@@ -37,6 +37,21 @@ pip install -e .
 ### Python Usage
 Refer to [examples/test_pyrdma.py](examples/test_pyrdma.py)
 
+### RDMA Bandwidth Test
+A dedicated script for testing RDMA bandwidth performance is available at [examples/rdma_bandwidth_test.py](examples/rdma_bandwidth_test.py).
+
+To run the bandwidth test:
+
+1. Start the server:
+   ```bash
+   python examples/rdma_bandwidth_test.py --role server
+   ```
+
+2. In another terminal, run the client:
+   ```bash
+   python examples/rdma_bandwidth_test.py --role client --server-ip <server_ip>
+   ```
+
 ### C++ Usage
 Refer to [examples/rdma](examples/rdma) and [examples/tcp](examples/tcp)
 
