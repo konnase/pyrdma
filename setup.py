@@ -52,7 +52,7 @@ setup(
     description="A Python wrapper for RDMA communication using pybind11",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/konnase/communicator",
+    url="https://github.com/konnase/pyrdma",
     ext_modules=get_extensions(),
     setup_requires=["pybind11"],
     cmdclass={"build_ext": build_ext},
