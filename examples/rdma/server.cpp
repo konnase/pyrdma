@@ -7,8 +7,10 @@
 #include <cstdlib>
 #include <ctime>
 #include <iostream>
+#include <malloc.h>
 
 static const int PORT = 7471;
+static const size_t BUF_SIZE = 4096;
 
 static void die(const char* msg){ perror(msg); exit(1); }
 
@@ -27,6 +29,12 @@ int main() {
 
     // Create RDMA communicator
     RDMACommunicator rdma_comm(cfd, "mlx5_0");
+    // Create external buffer
+    char* buf = (char*)aligned_alloc(4096, BUF_SIZE);
+    if (!buf) die("Failed to allocate buffer");
+    
+    // Set buffer
+    rdma_comm.set_buffer(buf, BUF_SIZE);
     
     // Exchange QP information
     WireMsg peer{}, self{};
@@ -44,8 +52,9 @@ int main() {
     std::cout<<"Server ready. Waiting client RDMA WRITE...\n";
     // 简单等待对端写入，然后打印缓冲区
     sleep(2);
-    std::cout<<"Server buf: "<< (char*)rdma_comm.get_buffer() << std::endl;
+    std::cout<<"Server buf: "<< (char*)buf << std::endl;
 
     close(cfd); close(lfd);
+    free(buf);
     return 0;
 }

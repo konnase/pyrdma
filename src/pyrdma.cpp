@@ -12,10 +12,22 @@ PYBIND11_MODULE(pyrdma, m) {
 
     // 基类 Communicator 的绑定（抽象类，不提供构造函数）
     py::class_<Communicator>(m, "Communicator")
-        .def("send", &Communicator::send, "Send data")
-        .def("recv", &Communicator::recv, "Receive data")
-        .def("write", &Communicator::write, "RDMA write operation")
-        .def("read", &Communicator::read, "RDMA read operation");
+        .def("send", [](Communicator& self, py::buffer buf, size_t len) {
+            py::buffer_info info = buf.request();
+            return self.send(info.ptr, len);
+        }, "Send data")
+        .def("recv", [](Communicator& self, py::buffer buf, size_t len) {
+            py::buffer_info info = buf.request();
+            return self.recv(info.ptr, len);
+        }, "Receive data")
+        .def("write", [](Communicator& self, py::buffer buf, size_t len, uint64_t remote_addr, uint32_t rkey) {
+            py::buffer_info info = buf.request();
+            return self.write(info.ptr, len, remote_addr, rkey);
+        }, "RDMA write operation")
+        .def("read", [](Communicator& self, py::buffer buf, size_t len, uint64_t remote_addr, uint32_t rkey) {
+            py::buffer_info info = buf.request();
+            return self.read(info.ptr, len, remote_addr, rkey);
+        }, "RDMA read operation");
 
     // TCPCommunicator 的绑定
     py::class_<TCPCommunicator, Communicator>(m, "TCPCommunicator")
@@ -24,21 +36,31 @@ PYBIND11_MODULE(pyrdma, m) {
 
     // RDMACommunicator 的绑定
     py::class_<RDMACommunicator, Communicator>(m, "RDMACommunicator")
-        .def(py::init<int, char*, int, size_t>(),
-             "Initialize with socket file descriptor, device name, GID index and buffer size")
-        .def("post_receive", &RDMACommunicator::post_receive, "Post receive buffer")
-        .def("exchange_qp_info", &RDMACommunicator::exchange_qp_info,
-             "Exchange QP information with peer")
-        .def("modify_qp_to_init", &RDMACommunicator::modify_qp_to_init,
-             "Modify QP state to INIT")
-        .def("modify_qp_to_rtr", &RDMACommunicator::modify_qp_to_rtr,
-             "Modify QP state to RTR")
-        .def("modify_qp_to_rts", &RDMACommunicator::modify_qp_to_rts,
-             "Modify QP state to RTS")
-        .def("get_buffer", &RDMACommunicator::get_buffer, "Get local buffer address")
-        .def("get_rkey", &RDMACommunicator::get_rkey, "Get remote key")
-        .def("get_buffer_address", &RDMACommunicator::get_buffer_address,
-             "Get buffer address as uint64_t");
+        .def(py::init<int, char*, int>(),
+             py::arg("fd"), py::arg("dev_name"), py::arg("gid_index") = 0,
+             "Initialize with socket file descriptor, device name, GID index")
+        .def("post_receive", [](RDMACommunicator& self, py::buffer buf, size_t len) {
+            py::buffer_info info = buf.request();
+            return self.post_receive(info.ptr, len);
+        }, "Post receive buffer")
+        .def("exchange_qp_info", [](RDMACommunicator& self, WireMsg& local, WireMsg& peer) {
+            return self.exchange_qp_info(local, peer);
+        }, "Exchange QP information with peer")
+        .def("modify_qp_to_init", [](RDMACommunicator& self) {
+            return self.modify_qp_to_init();
+        }, "Modify QP state to INIT")
+        .def("modify_qp_to_rtr", [](RDMACommunicator& self, WireMsg& peer) {
+            return self.modify_qp_to_rtr(peer);
+        }, "Modify QP state to RTR")
+        .def("modify_qp_to_rts", [](RDMACommunicator& self, WireMsg& local) {
+            return self.modify_qp_to_rts(local);
+        }, "Modify QP state to RTS")
+        .def("get_fd", &RDMACommunicator::get_fd, "Get socket file descriptor")
+        .def("set_buffer", [](RDMACommunicator& self, py::buffer buf, size_t size) {
+            py::buffer_info info = buf.request();
+            return self.set_buffer(info.ptr, size);
+        }, "Set external buffer")
+        .def("get_rkey", &RDMACommunicator::get_rkey, "Get remote key");
 
     // WireMsg 结构体的绑定
     py::class_<WireMsg>(m, "WireMsg")

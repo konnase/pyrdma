@@ -7,6 +7,7 @@
 #include <cstdlib>
 #include <ctime>
 #include <iostream>
+#include <malloc.h>
 
 static const int PORT = 7471;
 static const size_t BUF_SIZE = 4096;
@@ -25,10 +26,16 @@ int main(int argc, char** argv){
     if(connect(cfd,(sockaddr*)&sa,sizeof(sa))<0) die("connect");
 
     // Create RDMA communicator
-    RDMACommunicator rdma_comm(cfd, "mlx5_0", 0, BUF_SIZE);
+    RDMACommunicator rdma_comm(cfd, "mlx5_0", 0);
     
-    // Get buffer and write message to it
-    char* buf = (char*)rdma_comm.get_buffer();
+    // Create external buffer
+    char* buf = (char*)aligned_alloc(4096, BUF_SIZE);
+    if (!buf) die("Failed to allocate buffer");
+    
+    // Set buffer
+    rdma_comm.set_buffer(buf, BUF_SIZE);
+    
+    // Write message to buffer
     snprintf(buf, BUF_SIZE, "Hello RDMA WRITE via pure libibverbs.");
     
     // Exchange QP information
@@ -54,5 +61,7 @@ int main(int argc, char** argv){
     std::cout<<"WRITE completed. bytes="<<msg_len<<"\n";
 
     close(cfd);
+    // Free allocated buffer
+    free(buf);
     return 0;
 }

@@ -32,9 +32,9 @@ void RDMACommunicator::writen(int fd, const void* p, size_t n) {
     }
 }
 
-RDMACommunicator::RDMACommunicator(int fd, char* device_name, int gid_index, size_t buffer_size) : 
-    socket_fd(fd), device_name(device_name), gid_index(gid_index), buf_size(buffer_size) {
-    // Initialize RDMA resources
+RDMACommunicator::RDMACommunicator(int fd, char* device_name, int gid_index) : 
+    socket_fd(fd), device_name(device_name), gid_index(gid_index), buf(nullptr), buf_size(0) {
+    // Initialize RDMA resources without buffer
     if (init_rdma() != 0) {
         die("Failed to initialize RDMA");
     }
@@ -42,11 +42,37 @@ RDMACommunicator::RDMACommunicator(int fd, char* device_name, int gid_index, siz
 
 RDMACommunicator::~RDMACommunicator() {
     if (mr) ibv_dereg_mr(mr);
-    if (buf) free(buf);
+    // Do not free buf as it's managed externally
     if (qp) ibv_destroy_qp(qp);
     if (cq) ibv_destroy_cq(cq);
     if (pd) ibv_dealloc_pd(pd);
     if (ctx) ibv_close_device(ctx);
+}
+
+int RDMACommunicator::set_buffer(void* buffer, size_t size) {
+    // Check if buffer is already set
+    if (buf != nullptr) {
+        // Deregister existing memory region
+        if (mr) {
+            ibv_dereg_mr(mr);
+            mr = nullptr;
+        }
+        buf = nullptr;
+        buf_size = 0;
+    }
+    
+    // Set new buffer
+    buf = buffer;
+    buf_size = size;
+    
+    // Register buffer if it's not null
+    if (buf != nullptr) {
+        mr = ibv_reg_mr(pd, buf, buf_size,
+            IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE | IBV_ACCESS_REMOTE_READ);
+        if (!mr) return -1;
+    }
+    
+    return 0;
 }
 
 int RDMACommunicator::init_rdma() {
@@ -102,14 +128,13 @@ int RDMACommunicator::init_rdma() {
     qp = ibv_create_qp(pd, &qia);
     if (!qp) return -1;
     
-    // Allocate and register buffer
-    buf = aligned_alloc(4096, buf_size);
-    if (!buf) return -1;
+    // Do not allocate buffer here, it will be set externally
+    // Initialize buf and buf_size to 0/nullptr
+    buf = nullptr;
+    buf_size = 0;
+    mr = nullptr;
     
-    memset(buf, 0, buf_size);
-    mr = ibv_reg_mr(pd, buf, buf_size,
-        IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE | IBV_ACCESS_REMOTE_READ);
-    if (!mr) return -1;
+    return 0;
     
     return 0;
 }
@@ -182,8 +207,15 @@ int RDMACommunicator::exchange_qp_info(WireMsg& self, WireMsg& peer) {
     self.lid = port_attr.lid;
     
     memcpy(self.gid, &gid, 16);
-    self.rkey = mr->rkey;
-    self.vaddr = (uint64_t)(uintptr_t)buf;
+    
+    // Only set rkey and vaddr if buffer is set
+    if (mr) {
+        self.rkey = mr->rkey;
+        self.vaddr = (uint64_t)(uintptr_t)buf;
+    } else {
+        self.rkey = 0;
+        self.vaddr = 0;
+    }
     
     // Exchange information
     writen(socket_fd, &self, sizeof(self));

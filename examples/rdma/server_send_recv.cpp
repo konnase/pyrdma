@@ -27,8 +27,15 @@ int main() {
     int cfd = accept(lfd,nullptr,nullptr); if(cfd<0) die("accept");
 
     // Create RDMA communicator
-    RDMACommunicator rdma_comm(cfd, "mlx5_1", 0, BUF_SIZE);
+    RDMACommunicator rdma_comm(cfd, "mlx5_1", 0);
     printf("RDMACommunicator: fd=%d, buffer_size=%ld\n", cfd, BUF_SIZE);
+    
+    // Create external buffer
+    char* buf = (char*)aligned_alloc(4096, BUF_SIZE);
+    if (!buf) die("Failed to allocate buffer");
+    
+    // Set buffer
+    rdma_comm.set_buffer(buf, BUF_SIZE);
     
     // Exchange QP information
     WireMsg peer{}, self{};
@@ -44,7 +51,6 @@ int main() {
     if (rdma_comm.modify_qp_to_rts(self) != 0) die("modify_qp_to_rts");
 
     // Post receive buffer before waiting for data
-    char* buf = (char*)rdma_comm.get_buffer();
     if (rdma_comm.post_receive(buf, BUF_SIZE) != 0) die("post_receive failed");
 
     std::cout<<"Server ready. Waiting client RDMA SEND...\n";

@@ -47,8 +47,11 @@ public:  // Make these methods accessible from main
 private:  // Return to private for other members
     
 public:
-    RDMACommunicator(int fd, char* device_name, int gid_index = 0, size_t buffer_size = 4096);
+    RDMACommunicator(int fd, char* device_name, int gid_index = 0);
     ~RDMACommunicator();
+    
+    // Set external buffer
+    int set_buffer(void* buffer, size_t size);
     
     // Post receive work request for RDMA RECV operation
     int post_receive(void* buf, size_t len);
@@ -62,9 +65,8 @@ public:
     int read(void* local_buf, size_t len, uint64_t remote_addr, uint32_t rkey) override;
     
     // Getters for buffer information
-    void* get_buffer() { return buf; }
     uint32_t get_rkey() { return mr->rkey; }
-    uint64_t get_buffer_address() { return (uint64_t)(uintptr_t)buf; }
+    int get_fd() { return socket_fd; }
 };
 
 #endif // RDMA_COMMUNICATOR_H

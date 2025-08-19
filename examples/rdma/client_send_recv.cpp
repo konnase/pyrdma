@@ -25,11 +25,18 @@ int main(int argc, char** argv){
     if(connect(cfd,(sockaddr*)&sa,sizeof(sa))<0) die("connect");
 
     // Create RDMA communicator
-    RDMACommunicator rdma_comm(cfd, "mlx5_1", 0, BUF_SIZE);
+    RDMACommunicator rdma_comm(cfd, "mlx5_1", 0);
     printf("RDMACommunicator: fd=%d, buffer_size=%ld\n", cfd, BUF_SIZE);
     
-    // Get buffer and write message to it
-    char* buf = (char*)rdma_comm.get_buffer();
+    // Create external buffer
+    char* buf = (char*)aligned_alloc(4096, BUF_SIZE);
+    if (!buf) die("Failed to allocate buffer");
+    
+    // Set buffer
+    rdma_comm.set_buffer(buf, BUF_SIZE);
+
+    // 此代码行使用 snprintf 函数将字符串 "Hello RDMA SEND via pure libibverbs." 写入到缓冲区 buf 中，
+    // 最多写入 BUF_SIZE 个字符，确保不会发生缓冲区溢出。
     snprintf(buf, BUF_SIZE, "Hello RDMA SEND via pure libibverbs.");
     printf("RDMACommunicator: buf=%s\n", buf);
     

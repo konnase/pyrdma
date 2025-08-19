@@ -2,6 +2,7 @@
 import sys
 import socket
 import time
+import ctypes
 
 # 尝试导入我们的pyrdma模块
 try:
@@ -81,26 +82,152 @@ def run_tcp_client():
 def run_rdma_test():
     print("\n=== Testing RDMA Communicator ===")
     print("Note: RDMA test requires proper RDMA hardware and configuration.")
-    print("This is just a skeleton to demonstrate the API usage.")
+    print("This example shows how to use the RDMA send/recv methods.")
 
     try:
-        # 这里只是展示API用法的框架
-        # 实际使用时需要设置RDMA设备、建立连接并交换QP信息
-        print("RDMA communicator API usage example:")
-        print("1. Create socket connection")
-        print("2. Create RDMACommunicator with socket fd, device name and GID index")
-        print("3. Exchange QP information with peer")
-        print("4. Modify QP states (INIT -> RTR -> RTS)")
-        print("5. Post receive buffer")
-        print("6. Send/Receive data using send/recv methods")
-        print("7. Perform RDMA operations using write/read methods")
+        # 创建RDMA服务器和客户端
+        server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        server_socket.bind(("localhost", 12346))
+        server_socket.listen(1)
+
+        # 在子进程中运行客户端
+        import subprocess
+        client_process = subprocess.Popen([sys.executable, __file__, "rdma_client"])
+
+        # 接受客户端连接
+        conn, addr = server_socket.accept()
+        print(f"Accepted connection from {addr}")
+
+        # 创建RDMACommunicator
+        # 注意：实际使用时需要提供正确的设备名称和GID索引
+        server_comm = pyrdma.RDMACommunicator(conn.fileno(), "mlx5_0", 0)
+        print(f"Server RDMA communicator created with fd: {server_comm.get_fd()}")
+        
+        # 创建外部缓冲区
+        buf_size = 4096
+        buf = bytearray(buf_size)
+        
+        # 设置缓冲区
+        server_comm.set_buffer(buf, buf_size)
+
+        # 创建WireMsg对象用于交换QP信息
+        server_msg = pyrdma.WireMsg()
+
+        # 与客户端交换QP信息
+        client_msg = pyrdma.WireMsg()
+        print("Exchanging QP information with client")
+        server_comm.exchange_qp_info(server_msg, client_msg)
+        print("Exchanged QP information with client")
+
+        # 修改QP状态到INIT
+        server_comm.modify_qp_to_init()
+        print("QP state modified to INIT")
+
+        # 修改QP状态到RTR
+        server_comm.modify_qp_to_rtr(client_msg)
+        print("QP state modified to RTR")
+
+        # 修改QP状态到RTS
+        server_comm.modify_qp_to_rts(server_msg)
+        print("QP state modified to RTS")
+
+        # 发布接收缓冲区
+        server_comm.post_receive(buf, buf_size)
+        print("Posted receive buffer")
+
+        # 接收消息
+        n = server_comm.recv(buf, buf_size)
+        print(f"Received {n} bytes: {buf[:n].decode()}")
+
+        # 发送回复
+        response = "Message received successfully."
+        response_bytes = response.encode()
+        buf[:len(response_bytes)] = response_bytes
+        
+        # 将回复写入缓冲区
+        n = server_comm.send(buf, len(response_bytes))
+        print(f"Sent {n} bytes: {response}")
+
+        # 等待客户端结束
+        client_process.wait()
+        server_socket.close()
+        print("RDMA test completed")
     except Exception as e:
         print(f"RDMA test failed: {e}")
+        print("Please make sure RDMA hardware is available and properly configured.")
+
+def run_rdma_client():
+    # RDMA客户端逻辑
+    try:
+        client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        client_socket.connect(("localhost", 12346))
+
+        # 创建RDMACommunicator
+        # 注意：实际使用时需要提供正确的设备名称和GID索引
+        client_comm = pyrdma.RDMACommunicator(client_socket.fileno(), "mlx5_0", 0)
+        print(f"Client RDMA communicator created with fd: {client_comm.get_fd()}")
+        
+        # 创建外部缓冲区
+        buf_size = 4096
+        buf = bytearray(buf_size)
+        # print(f"External buffer address: {buf}")
+        
+        # 设置缓冲区
+        client_comm.set_buffer(buf, buf_size)
+
+        # 准备要发送的消息
+        message = "Hello RDMA SEND via pure libibverbs."
+        message_bytes = message.encode()
+        # 将消息写入缓冲区
+        print(f"Message start write bytes: {message_bytes}")
+        buf[:len(message_bytes)] = message_bytes
+
+        # 创建WireMsg对象用于交换QP信息
+        client_msg = pyrdma.WireMsg()
+        client_msg.rkey = 0  # 客户端不提供rkey/vaddr给服务器
+        client_msg.vaddr = 0
+
+        # 与服务器交换QP信息
+        server_msg = pyrdma.WireMsg()
+        print("Exchanging QP information with server")
+        client_comm.exchange_qp_info(client_msg, server_msg)
+        print("Exchanged QP information with server")
+
+        # 修改QP状态到INIT
+        client_comm.modify_qp_to_init()
+        print("QP state modified to INIT")
+
+        # 修改QP状态到RTR
+        client_comm.modify_qp_to_rtr(server_msg)
+        print("QP state modified to RTR")
+
+        # 修改QP状态到RTS
+        client_comm.modify_qp_to_rts(client_msg)
+        print("QP state modified to RTS")
+
+        # 发送消息
+        n = client_comm.send(buf, len(message_bytes))  # +1 for null terminator
+        print(f"Sent {n} bytes: {message}")
+
+        # 准备接收服务器回复
+        client_comm.post_receive(buf, 4096)
+        print("Posted receive buffer")
+
+        # 接收回复
+        n = client_comm.recv(buf, buf_size)
+        print(f"Received {n} bytes: {buf[:n].decode()}")
+
+        client_socket.close()
+    except Exception as e:
+        print(f"RDMA client failed: {e}")
+        print("Please make sure RDMA hardware is available and properly configured.")
 
 
 if __name__ == "__main__":
     if len(sys.argv) > 1 and sys.argv[1] == "tcp_client":
         run_tcp_client()
+    elif len(sys.argv) > 1 and sys.argv[1] == "rdma_client":
+        run_rdma_client()
     else:
         # 打印模块信息
         print("PyRDMA Module Test")
