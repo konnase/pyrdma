@@ -104,7 +104,7 @@ def run_rdma_test():
         print(f"Server RDMA communicator created with fd: {server_comm.get_fd()}")
         
         # 创建外部缓冲区
-        buf_size = 4096
+        buf_size = 1024
         buf = bytearray(buf_size)
         
         # 设置缓冲区
@@ -168,7 +168,7 @@ def run_rdma_client():
         print(f"Client RDMA communicator created with fd: {client_comm.get_fd()}")
         
         # 创建外部缓冲区
-        buf_size = 4096
+        buf_size = 1024
         buf = bytearray(buf_size)
         # print(f"External buffer address: {buf}")
         
@@ -210,7 +210,7 @@ def run_rdma_client():
         print(f"Sent {n} bytes: {message}")
 
         # 准备接收服务器回复
-        client_comm.post_receive(buf, 4096)
+        client_comm.post_receive(buf, 1024)
         print("Posted receive buffer")
 
         # 接收回复

@@ -19,16 +19,16 @@ public:
     TCPCommunicator(int fd) : socket_fd(fd) {}
     
     // Implement send/recv operations
-    int send(const void* buf, size_t len) override;
-    int recv(void* buf, size_t len) override;
+    int send(const void* buf, size_t len, size_t offset = 0) override;
+    int recv(void* buf, size_t len, size_t offset = 0) override;
     
     // RDMA operations are not supported in TCP
-    int write(const void* /*local_buf*/, size_t /*len*/, uint64_t /*remote_addr*/, uint32_t /*rkey*/) override {
+    int write(const void* /*local_buf*/, size_t /*len*/, uint64_t /*remote_addr*/, uint32_t /*rkey*/, size_t offset = 0) override {
         // Not supported
         return -1;
     }
     
-    int read(void* /*local_buf*/, size_t /*len*/, uint64_t /*remote_addr*/, uint32_t /*rkey*/) override {
+    int read(void* /*local_buf*/, size_t /*len*/, uint64_t /*remote_addr*/, uint32_t /*rkey*/, size_t offset = 0) override {
         // Not supported
         return -1;
     }

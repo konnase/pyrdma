@@ -224,10 +224,10 @@ int RDMACommunicator::exchange_qp_info(WireMsg& self, WireMsg& peer) {
     return 0;
 }
 
-int RDMACommunicator::send(const void* buf, size_t len) {
+int RDMACommunicator::send(const void* buf, size_t len, size_t offset) {
     // Use RDMA SEND to send data
     ibv_sge sge{};
-    sge.addr = (uintptr_t)buf;
+    sge.addr = (uintptr_t)buf + offset;
     sge.length = len;
     sge.lkey = mr->lkey;
     
@@ -252,12 +252,17 @@ int RDMACommunicator::send(const void* buf, size_t len) {
         return -1;
     }
     
-    return 0;
+    // we set wr.wr_id = 3, 
+    // so we return wc.byte_len if wr.wr_id == 3
+    if (wc.wr_id == 3) {
+        return wc.byte_len;
+    }
+    return -1;
 }
 
-int RDMACommunicator::post_receive(void* buf, size_t len) {
+int RDMACommunicator::post_receive(void* buf, size_t len, size_t offset) {
     ibv_sge sge{};
-    sge.addr = (uintptr_t)buf;
+    sge.addr = (uintptr_t)buf + offset;
     sge.length = len;
     sge.lkey = mr->lkey;
     
@@ -270,7 +275,7 @@ int RDMACommunicator::post_receive(void* buf, size_t len) {
     return ibv_post_recv(qp, &wr, &bad);
 }
 
-int RDMACommunicator::recv(void* buf, size_t len) {
+int RDMACommunicator::recv(void* buf, size_t len, size_t offset) {
     // Poll completion queue for received data
     ibv_wc wc{};
     int np;
@@ -292,9 +297,9 @@ int RDMACommunicator::recv(void* buf, size_t len) {
     return -1;
 }
 
-int RDMACommunicator::write(const void* local_buf, size_t len, uint64_t remote_addr, uint32_t rkey) {
+int RDMACommunicator::write(const void* local_buf, size_t len, uint64_t remote_addr, uint32_t rkey, size_t offset) {
     ibv_sge sge{};
-    sge.addr = (uintptr_t)local_buf;
+    sge.addr = (uintptr_t)local_buf + offset;
     sge.length = len;
     sge.lkey = mr->lkey;
     
@@ -304,7 +309,7 @@ int RDMACommunicator::write(const void* local_buf, size_t len, uint64_t remote_a
     wr.sg_list = &sge;
     wr.num_sge = 1;
     wr.send_flags = IBV_SEND_SIGNALED;
-    wr.wr.rdma.remote_addr = remote_addr;
+    wr.wr.rdma.remote_addr = remote_addr + offset;
     wr.wr.rdma.rkey = rkey;
     
     ibv_send_wr* bad = nullptr;
@@ -324,9 +329,9 @@ int RDMACommunicator::write(const void* local_buf, size_t len, uint64_t remote_a
     return 0;
 }
 
-int RDMACommunicator::read(void* local_buf, size_t len, uint64_t remote_addr, uint32_t rkey) {
+int RDMACommunicator::read(void* local_buf, size_t len, uint64_t remote_addr, uint32_t rkey, size_t offset) {
     ibv_sge sge{};
-    sge.addr = (uintptr_t)local_buf;
+    sge.addr = (uintptr_t)local_buf + offset;
     sge.length = len;
     sge.lkey = mr->lkey;
     
@@ -336,7 +341,7 @@ int RDMACommunicator::read(void* local_buf, size_t len, uint64_t remote_addr, ui
     wr.sg_list = &sge;
     wr.num_sge = 1;
     wr.send_flags = IBV_SEND_SIGNALED;
-    wr.wr.rdma.remote_addr = remote_addr;
+    wr.wr.rdma.remote_addr = remote_addr + offset;
     wr.wr.rdma.rkey = rkey;
     
     ibv_send_wr* bad = nullptr;

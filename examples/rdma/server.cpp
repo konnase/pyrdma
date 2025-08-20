@@ -7,10 +7,11 @@
 #include <cstdlib>
 #include <ctime>
 #include <iostream>
+#include <iomanip>
 #include <malloc.h>
 
 static const int PORT = 7471;
-static const size_t BUF_SIZE = 4096;
+static const size_t BUF_SIZE = 1024;
 
 static void die(const char* msg){ perror(msg); exit(1); }
 
@@ -52,7 +53,17 @@ int main() {
     std::cout<<"Server ready. Waiting client RDMA WRITE...\n";
     // 简单等待对端写入，然后打印缓冲区
     sleep(2);
-    std::cout<<"Server buf: "<< (char*)buf << std::endl;
+    std::cout << "Server buf: ";
+    for (size_t i = 0; i < BUF_SIZE; ++i) {
+        if (buf[i] >= 32 && buf[i] <= 126) {
+            // Printable ASCII character
+            std::cout << buf[i];
+        } else {
+            // Non-printable character, print a dot
+            std::cout << '.';
+        }
+    }
+    std::cout << std::endl;
 
     close(cfd); close(lfd);
     free(buf);

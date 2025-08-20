@@ -12,21 +12,21 @@ PYBIND11_MODULE(pyrdma, m) {
 
     // 基类 Communicator 的绑定（抽象类，不提供构造函数）
     py::class_<Communicator>(m, "Communicator")
-        .def("send", [](Communicator& self, py::buffer buf, size_t len) {
+        .def("send", [](Communicator& self, py::buffer buf, size_t len, size_t offset = 0) {
             py::buffer_info info = buf.request();
-            return self.send(info.ptr, len);
-        }, "Send data")
-        .def("recv", [](Communicator& self, py::buffer buf, size_t len) {
+            return self.send(info.ptr, len, offset);
+        }, py::arg("buf"), py::arg("len"), py::arg("offset") = 0, "Send data")
+        .def("recv", [](Communicator& self, py::buffer buf, size_t len, size_t offset = 0) {
             py::buffer_info info = buf.request();
-            return self.recv(info.ptr, len);
-        }, "Receive data")
-        .def("write", [](Communicator& self, py::buffer buf, size_t len, uint64_t remote_addr, uint32_t rkey) {
+            return self.recv(info.ptr, len, offset);
+        }, py::arg("buf"), py::arg("len"), py::arg("offset") = 0, "Receive data")
+        .def("write", [](Communicator& self, py::buffer buf, size_t len, uint64_t remote_addr, uint32_t rkey, size_t offset = 0) {
             py::buffer_info info = buf.request();
-            return self.write(info.ptr, len, remote_addr, rkey);
+            return self.write(info.ptr, len, remote_addr, rkey, offset);
         }, "RDMA write operation")
-        .def("read", [](Communicator& self, py::buffer buf, size_t len, uint64_t remote_addr, uint32_t rkey) {
+        .def("read", [](Communicator& self, py::buffer buf, size_t len, uint64_t remote_addr, uint32_t rkey, size_t offset = 0) {
             py::buffer_info info = buf.request();
-            return self.read(info.ptr, len, remote_addr, rkey);
+            return self.read(info.ptr, len, remote_addr, rkey, offset);
         }, "RDMA read operation");
 
     // TCPCommunicator 的绑定
@@ -39,10 +39,10 @@ PYBIND11_MODULE(pyrdma, m) {
         .def(py::init<int, char*, int>(),
              py::arg("fd"), py::arg("dev_name"), py::arg("gid_index") = 0,
              "Initialize with socket file descriptor, device name, GID index")
-        .def("post_receive", [](RDMACommunicator& self, py::buffer buf, size_t len) {
+        .def("post_receive", [](RDMACommunicator& self, py::buffer buf, size_t len, size_t offset = 0) {
             py::buffer_info info = buf.request();
-            return self.post_receive(info.ptr, len);
-        }, "Post receive buffer")
+            return self.post_receive(info.ptr, len, offset);
+        }, py::arg("buf"), py::arg("len"), py::arg("offset") = 0, "Post receive buffer")
         .def("exchange_qp_info", [](RDMACommunicator& self, WireMsg& local, WireMsg& peer) {
             return self.exchange_qp_info(local, peer);
         }, "Exchange QP information with peer")

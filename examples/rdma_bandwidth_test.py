@@ -20,6 +20,7 @@ DEFAULT_BUFFER_SIZE = 1024**3
 DEFAULT_ITERATIONS = 100
 DEFAULT_DEVICE = "mlx5_0"
 DEFAULT_GID_INDEX = 0
+DEFAULT_BUCKET_SIZE = 1024**3 # 1GB
 
 
 def run_server(port, buffer_size, iterations, device, gid_index):
@@ -61,20 +62,35 @@ def run_server(port, buffer_size, iterations, device, gid_index):
         # Warm up
         print("Warming up...")
         for i in range(10):
-            server_comm.post_receive(buf, buffer_size)
-            server_comm.recv(buf, buffer_size)
-            server_comm.send(buf, 8)  # Send small ack
+            # Calculate number of buckets needed
+            num_buckets = (buffer_size + DEFAULT_BUCKET_SIZE - 1) // DEFAULT_BUCKET_SIZE
+            
+            # Receive data in chunks
+            for j in range(num_buckets):
+                chunk_size = min(DEFAULT_BUCKET_SIZE, buffer_size - j * DEFAULT_BUCKET_SIZE)
+                offset = j * DEFAULT_BUCKET_SIZE
+                server_comm.post_receive(buf, chunk_size, offset)
+                n = server_comm.recv(buf, chunk_size, offset)
+            
+            # Send ack
+            ack = f"ACK{i}".encode()
+            buf[:len(ack)] = ack
+            server_comm.send(buf, len(ack))
         
         # Bandwidth test
         print(f"Starting bandwidth test with {iterations} iterations")
         start_time = time.time()
         
         for i in range(iterations):
-            # Post receive buffer
-            server_comm.post_receive(buf, buffer_size)
+            # Calculate number of buckets needed
+            num_buckets = (buffer_size + DEFAULT_BUCKET_SIZE - 1) // DEFAULT_BUCKET_SIZE
             
-            # Receive data
-            n = server_comm.recv(buf, buffer_size)
+            # Receive data in chunks
+            for j in range(num_buckets):
+                chunk_size = min(DEFAULT_BUCKET_SIZE, buffer_size - j * DEFAULT_BUCKET_SIZE)
+                offset = j * DEFAULT_BUCKET_SIZE
+                server_comm.post_receive(buf, chunk_size, offset)
+                n = server_comm.recv(buf, chunk_size, offset)
             
             # Send ack
             ack = f"ACK{i}".encode()
@@ -148,17 +164,32 @@ def run_client(port, buffer_size, iterations, device, gid_index, server_ip):
         # Warm up
         print("Warming up...")
         for i in range(10):
-            client_comm.send(buf, buffer_size)
-            client_comm.post_receive(buf, buffer_size)
-            client_comm.recv(buf, buffer_size)
+            # Calculate number of buckets needed
+            num_buckets = (buffer_size + DEFAULT_BUCKET_SIZE - 1) // DEFAULT_BUCKET_SIZE
+            
+            # Send data in chunks
+            for j in range(num_buckets):
+                chunk_size = min(DEFAULT_BUCKET_SIZE, buffer_size - j * DEFAULT_BUCKET_SIZE)
+                offset = j * DEFAULT_BUCKET_SIZE
+                client_comm.send(buf, chunk_size, offset)
+            
+            # Receive ack
+            client_comm.post_receive(buf, 8)
+            n = client_comm.recv(buf, 8)
         
         # Bandwidth test
         print(f"Starting bandwidth test with {iterations} iterations")
         start_time = time.time()
         
         for i in range(iterations):
-            # Send data
-            client_comm.send(buf, buffer_size)
+            # Calculate number of buckets needed
+            num_buckets = (buffer_size + DEFAULT_BUCKET_SIZE - 1) // DEFAULT_BUCKET_SIZE
+            
+            # Send data in chunks
+            for j in range(num_buckets):
+                chunk_size = min(DEFAULT_BUCKET_SIZE, buffer_size - j * DEFAULT_BUCKET_SIZE)
+                offset = j * DEFAULT_BUCKET_SIZE
+                client_comm.send(buf, chunk_size, offset)
             
             # Receive ack
             client_comm.post_receive(buf, buffer_size)

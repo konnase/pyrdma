@@ -54,15 +54,15 @@ public:
     int set_buffer(void* buffer, size_t size);
     
     // Post receive work request for RDMA RECV operation
-    int post_receive(void* buf, size_t len);
+    int post_receive(void* buf, size_t len, size_t offset = 0);
     
     // Implement send/recv operations using RDMA SEND/RECV
-    int send(const void* buf, size_t len) override;
-    int recv(void* buf, size_t len) override;
+    int send(const void* buf, size_t len, size_t offset = 0) override;
+    int recv(void* buf, size_t len, size_t offset = 0) override;
     
     // Implement RDMA operations
-    int write(const void* local_buf, size_t len, uint64_t remote_addr, uint32_t rkey) override;
-    int read(void* local_buf, size_t len, uint64_t remote_addr, uint32_t rkey) override;
+    int write(const void* local_buf, size_t len, uint64_t remote_addr, uint32_t rkey, size_t offset = 0) override;
+    int read(void* local_buf, size_t len, uint64_t remote_addr, uint32_t rkey, size_t offset = 0) override;
     
     // Getters for buffer information
     uint32_t get_rkey() { return mr->rkey; }

@@ -9,7 +9,7 @@
 #include <iostream>
 
 static const int PORT = 7471;
-static const size_t BUF_SIZE = 4096;
+static const size_t BUF_SIZE = 1024;
 
 static void die(const char* msg){ perror(msg); exit(1); }
 
@@ -51,14 +51,24 @@ int main() {
     if (rdma_comm.modify_qp_to_rts(self) != 0) die("modify_qp_to_rts");
 
     // Post receive buffer before waiting for data
-    if (rdma_comm.post_receive(buf, BUF_SIZE) != 0) die("post_receive failed");
+    if (rdma_comm.post_receive(buf, BUF_SIZE, 10) != 0) die("post_receive failed");
 
     std::cout<<"Server ready. Waiting client RDMA SEND...\n";
     // Wait for RDMA RECV operation
     int bytes_received = rdma_comm.recv(buf, BUF_SIZE);
     if (bytes_received < 0) die("RDMA recv failed");
     
-    std::cout<<"Server received: "<<buf<<" (bytes="<<bytes_received<<")"<<std::endl;
+    std::cout << "Server buf: ";
+    for (size_t i = 0; i < BUF_SIZE; ++i) {
+        if (buf[i] >= 32 && buf[i] <= 126) {
+            // Printable ASCII character
+            std::cout << buf[i];
+        } else {
+            // Non-printable character, print a dot
+            std::cout << '.';
+        }
+    }
+    std::cout << std::endl;
 
     // Send confirmation message to client
     snprintf(buf, BUF_SIZE, "Message received successfully.");

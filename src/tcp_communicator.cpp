@@ -11,8 +11,9 @@ static void die(const char* msg) {
     exit(1); 
 }
 
-int TCPCommunicator::send(const void* buf, size_t len) {
-    ssize_t ret = ::send(socket_fd, buf, len, 0);
+int TCPCommunicator::send(const void* buf, size_t len, size_t offset) {
+    const char* p = (const char*)buf + offset;
+    ssize_t ret = ::send(socket_fd, p, len, 0);
     std::cout << "send " << ret << " bytes" << std::endl;
     if (ret < 0) {
         die("send");
@@ -20,8 +21,9 @@ int TCPCommunicator::send(const void* buf, size_t len) {
     return ret;
 }
 
-int TCPCommunicator::recv(void* buf, size_t len) {
-    ssize_t ret = ::recv(socket_fd, buf, len, 0);
+int TCPCommunicator::recv(void* buf, size_t len, size_t offset) {
+    char* p = (char*)buf + offset;
+    ssize_t ret = ::recv(socket_fd, p, len, 0);
     std::cout << "recv " << ret << " bytes" << std::endl;
     if (ret < 0) {
         die("recv");

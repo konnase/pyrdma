@@ -10,7 +10,7 @@
 #include <malloc.h>
 
 static const int PORT = 7471;
-static const size_t BUF_SIZE = 4096;
+static const size_t BUF_SIZE = 1024;
 
 static void die(const char* msg){ perror(msg); exit(1); }
 
@@ -56,7 +56,7 @@ int main(int argc, char** argv){
 
     // --- RDMA WRITE ---
     size_t msg_len = strlen(buf) + 1;
-    if (rdma_comm.write(buf, msg_len, peer.vaddr, peer.rkey) != 0) die("RDMA write failed");
+    if (rdma_comm.write(buf, msg_len, peer.vaddr, peer.rkey, 10) != 0) die("RDMA write failed");
     
     std::cout<<"WRITE completed. bytes="<<msg_len<<"\n";
 
